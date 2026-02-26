@@ -12,6 +12,7 @@ namespace WebServer.Server.HTTP_Request
         public Method Method { get; private set; }
         public string Url { get; private set; }
         public HeaderCollection Headers { get; private set; }
+        public CookieCollection Cookies { get; private set; }
         public string Body { get; private set; }
         public IReadOnlyDictionary<string, string> FromData { get; private set; } = new Dictionary<string, string>();
 
@@ -26,6 +27,8 @@ namespace WebServer.Server.HTTP_Request
 
             var headers = ParseHeaders(lines.Skip(1));
 
+            var cookies = ParseCookies(headers);
+
             var bodyLines = lines.Skip(headers.Count + 2).ToArray();
             var body = string.Join("\r\n", bodyLines);
 
@@ -36,6 +39,7 @@ namespace WebServer.Server.HTTP_Request
                 Method = method,
                 Url = url,
                 Headers = headers,
+                Cookies = cookies,
                 Body = body,
                 FromData = form
             };
@@ -80,7 +84,7 @@ namespace WebServer.Server.HTTP_Request
             var formCollection = new Dictionary<string, string>();
 
             if (headers.Contains(Header.ContentType)
-                && headers[Header.ContentType] == ContentType.FormUrlEncodet )
+                && headers[Header.ContentType] == ContentType.FormUrlEncodet)
             {
                 var parsedForm = ParseFormData(body);
 
@@ -112,6 +116,28 @@ namespace WebServer.Server.HTTP_Request
             }
 
             return formData;
+        }
+
+        private static CookieCollection ParseCookies(HeaderCollection headers)
+        {
+            var cookies = new CookieCollection();
+            if (headers.Contains(Header.Cookie))
+            {
+                var cookieHeader = headers[Header.Cookie];
+
+                var allCookies = cookieHeader.Split(';');
+
+                foreach (var cookie in allCookies)
+                {
+                    var cookieParts = cookie.Split("=");
+
+                    var cookieName = cookieParts[0].Trim();
+                    var cookieValue = cookieParts[1].Trim();
+
+                    cookies.Add(cookieName, cookieValue);
+                }
+            }
+            return cookies;
         }
 
     }
